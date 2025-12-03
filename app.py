@@ -71,9 +71,12 @@ def get_financial_summary():
 # Function to download pdf data
 def generate_pdf_report(transactions, general_income, general_expenses, total_balance):
     buffer = BytesIO()
+
+    # pdf sizing
     p = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter
 
+    #this is the summary part
     p.setFont("Helvetica-Bold", 18)
     p.drawString(50, height - 50, "Student Financial Report")
     
@@ -82,23 +85,50 @@ def generate_pdf_report(transactions, general_income, general_expenses, total_ba
     p.drawString(250, height - 110, f"General Expenses: ${general_expenses:,.2f}")
     p.drawString(450, height - 110, f"Net Balance: ${total_balance:,.2f}")
     
+    # header for transaction history
+    # ISSUE WHERE ITS OVERFLOWING OVER THE LETTER, FIX LATER
     p.setFont("Helvetica-Bold", 14)
     p.drawString(50, height - 150, "Transaction History")
     
-    y_pos = height - 185
+    p.setFont("Helvetica-Bold", 10)
+    p.setFillColor(colors.gray)
+    p.drawString(50, height - 175, "Date")
+    p.drawString(130, height - 175, "Type")
+    p.drawString(190, height - 175, "Category")
+    p.drawString(310, height - 175, "Description") 
+    p.drawString(450, height - 175, "Fund")
+    p.drawString(520, height - 175, "Amount") 
+    
+    #  line to seperate
+    p.line(50, height - 180, width - 50, height - 180)
+
+    # rows for the transaction history
+    y_pos = height - 195 
     row_height = 15
+    p.setFont("Helvetica", 10)
+
     for t in transactions:
+        # page break check
+        if y_pos < 72:
+            p.showPage()
+            y_pos = height - 50 # Reset Y position for new page
+            p.setFont("Helvetica", 10)
+
         p.setFillColor(colors.black)
         
+
         p.drawString(50, y_pos, t.date.strftime('%Y-%m-%d'))
-        p.drawString(150, y_pos, t.type)
-        p.drawString(250, y_pos, t.category)
-        p.drawString(350, y_pos, t.description if t.description else '-')
+        p.drawString(130, y_pos, t.type)
+        p.drawString(190, y_pos, t.category)
         
-        p.setFillColor(colors.black)
-        p.drawString(450, y_pos, f"${t.amount:,.2f}")
+        # make sure that description is not too long
+        description_text = (t.description[:20] + '...') if t.description and len(t.description) > 20 else t.description
+        p.drawString(310, y_pos, description_text if description_text else '-')
+        
+        p.drawString(450, y_pos, t.allocation if t.allocation else '-')
+        p.drawString(520, y_pos, f"${t.amount:,.2f}")
             
-        y_pos -= row_height
+        y_pos -= row_height # Move down for the next row
 
     p.save()
     buffer.seek(0)
@@ -109,18 +139,60 @@ def generate_pdf_report(transactions, general_income, general_expenses, total_ba
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
-        # adding new transactions
+        #transactions
         date = request.form['date']
         type = request.form['type']
         category = request.form['category']
         description = request.form['description']
         amount = float(request.form['amount'])
+        tuition_percent_raw = request.form.get('tuition_percent', '0')
+        tuition_percent = float(tuition_percent_raw) / 100.0
+        general_percent = 1.0 - tuition_percent
         
-        # where will it go?
-        allocation = request.form.get('allocation') 
+        input_date = datetime.strptime(date, '%Y-%m-%d').date()
+
+        # allow users to split income, so  put a certain amount to pay tuition and have the rest go to total balance
+        if type == 'Income' and tuition_percent > 0 and tuition_percent < 1.0:
+            #tution allocation
+            tuition_amount = amount * tuition_percent
+            tuition_transaction = Transaction(
+                date=input_date,
+                type='Income',
+                category=category,
+                description=f"{description} (Tuition Allocation: {tuition_percent*100:.0f}%)",
+                amount=tuition_amount,
+                allocation='Tuition'
+            )
+            db.session.add(tuition_transaction)
+
+            # total balance (general) allocation
+            general_amount = amount * general_percent
+            general_transaction = Transaction(
+                date=input_date,
+                type='Income',
+                category=category,
+                description=f"{description} (General Allocation: {general_percent*100:.0f}%)",
+                amount=general_amount,
+                allocation='General'
+            )
+            db.session.add(general_transaction)
+
+    
+        else:
+            # set the allocation based on the transaction type and split choice
+            if type == 'Income':
+                # ff tuition_percent is 1.0 (100%), allocate to Tuition
+                if tuition_percent == 1.0:
+                    allocation = 'Tuition'
+                # if tuition_percent is 0.0 (0%), allocate to General
+                else: # This covers 0% split and the original Income handling
+                    allocation = 'General'
+            else:
+                # expenses do not need an allocation value for the balance calculation
+                allocation = None 
 
         new_transaction = Transaction(
-            date=datetime.strptime(date, '%Y-%m-%d').date(),
+            date=input_date,
             type=type,
             category=category,
             description=description,
@@ -146,6 +218,36 @@ def index():
         total_tuition_left=total_tuition_left,
         total_tuition_cost=total_tuition_cost
     )
+
+@app.route('/transfer_to_tuition', methods=['POST'])
+def transfer_to_tuition():
+    amount = float(request.form['transfer_amount'])
+    
+    # 1. Expense: Deduct amount from General Balance
+    expense_transaction = Transaction(
+        date=datetime.utcnow().date(),
+        type='Expense',
+        category='Transfer',
+        description='Transfer to Tuition Fund (from General)',
+        amount=amount,
+        allocation='General' # This ensures it lowers the General Balance
+    )
+    db.session.add(expense_transaction)
+
+    # 2. Income: Add amount to Tuition Aid Applied
+    income_transaction = Transaction(
+        date=datetime.utcnow().date(),
+        type='Income',
+        category='Transfer',
+        description='Tuition Payment (from General Balance)',
+        amount=amount,
+        allocation='Tuition' # This ensures it lowers the Tuition Left calculation
+    )
+    db.session.add(income_transaction)
+    
+    db.session.commit()
+    return redirect(url_for('index'))
+
 
 @app.route('/delete/<int:id>', methods=['POST'])
 def delete_transaction(id):
