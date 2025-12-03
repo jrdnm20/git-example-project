@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Financial Manager</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #A9A9A9; 
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #778899;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #303030;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .summary-card {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+        }
+        .card {
+            flex: 1;
+            padding: 20px;
+            margin: 0 10px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            text-align: center;
+        }
+        .income-card { background-color: #A9A9A9; color: #303030; }
+        .expense-card { background-color: #A9A9A9; color: #303030; }
+        .balance-card { background-color: #A9A9A9; color: #303030; font-size: 1.2em; font-weight: bold; }
+
+        .card h3 { margin-top: 0; font-size: 1.5em; }
+        .card p { font-size: 1.6em; margin: 5px 0 0; } 
+
+        .content-flex {
+            display: flex;
+            gap: 20px;
+        }
+        .form-section {
+            flex: 1;
+            padding: 20px;
+            background-color: #ccc;
+            border-radius: 6px;
+        }
+        .charts-section {
+            flex: 2;
+            padding: 20px;
+            background-color: #ccc;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        form label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        form input, form select, form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        form button {
+            background-color: #778899;
+            color: #303030;
+            padding: 10px 15px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        
+        .table-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #303030;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ccc
+        }
+        th {
+            background-color: #A9A9A9;
+            color: #303030;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #ccc;
+        }
+        .income { color: #21533b; font-weight: bold; }
+        .expense { color: #5f242a; font-weight: bold; }
+
+        .delete-btn {
+            background-color: #6b4045;
+            color: #A9A9A9;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+         
+        .pdf-button {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #A9A9A9;
+            color: #303030;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+       
+        #allocation-group {
+            border: 1px dashed #778899;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Financial Aid Tracker</h1>
+
+        <div class="summary-card">
+            <div class="card income-card">
+                <h3>General Income</h3>
+                <p>${{ "{:,.2f}".format(general_income) }}</p>
+            </div>
+            
+            <div class="card expense-card">
+                <h3>General Expenses</h3>
+                <p>${{ "{:,.2f}".format(general_expenses) }}</p>
+            </div>
+            
+            <div class="card expense-card">
+                <h3>Tuition Left</h3>
+                <p>${{ "{:,.2f}".format(total_tuition_left) }}</p>
+            </div>
+
+            <div class="card balance-card">
+                <h3>Total Balance (General)</h3>
+                <p>${{ "{:,.2f}".format(total_balance) }}</p>
+            </div>
+        </div>
+
+        <a href="{{ url_for('generate_report') }}" class="pdf-button" target="_blank">
+            Download Data
+        </a>
+
+        <div class="content-flex">
+            <div class="form-section">
+                <h2>Add New Transaction</h2>
+                <form method="POST" action="{{ url_for('index') }}">
+                    <label for="type">Transaction Type:</label>
+                    <select id="type" name="type" required onchange="updateCategories(); toggleAllocation()">
+                        <option value="Income">Income</option>
+                        <option value="Expense">Expense</option>
+                    </select>
+
+                    <div id="allocation-container" style="display:none;">
+                        <div id="allocation-group">
+                            <label for="allocation">Allocate Fund To:</label>
+                            <select id="allocation" name="allocation" required>
+                                <option value="General">General Expenses (Rent, Food, etc.)</option>
+                                <option value="Tuition">Tuition Cost (Offset Tuition Balance)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label for="category">Category:</label>
+                    <select id="category" name="category" required>
+                        </select>
+
+                    <label for="amount">Amount ($):</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0.01" required>
+
+                    <label for="date">Date:</label>
+                    <input type="date" id="date" name="date" value="{{ today_date }}" required>
+
+                    <label for="description">Description (Optional):</label>
+                    <textarea id="description" name="description" rows="2"></textarea>
+
+                    <button type="submit">Add Transaction</button>
+                </form>
+            </div>
+
+            <div class="charts-section">
+                <h2>Spending Breakdown (Excluding Tuition)</h2>
+                <div style="height: 300px;"><canvas id="expenseChart"></canvas></div>
+
+                <h2>Income Sources (General Fund)</h2>
+                <div style="height: 300px;"><canvas id="incomeChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <h2>Transaction History</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Fund</th> 
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td>{{ t.date.strftime('%Y-%m-%d') }}</td>
+                        <td class="{{ 'income' if t.type == 'Income' else 'expense' }}">
+                            {{ t.type }}
+                        </td>
+                        <td>{{ t.category }}</td>
+                        <td>${{ "{:,.2f}".format(t.amount) }}</td>
+                        <td>{{ t.allocation if t.allocation else '-' }}</td> 
+                        <td>
+                            <form method="POST" action="{{ url_for('delete_transaction', id=t.id) }}" onsubmit="return confirm('Delete this?');">
+                                <button type="submit" class="delete-btn">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const chartData = {{ chart_data | tojson }};
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const dateInput = document.getElementById('date');
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+            updateCategories(); 
+            toggleAllocation();
+        });
+
+        // category list
+        const categories = {
+            Income: [
+                "Federal Grant", "State Grant", "Scholarships", 
+                "Personal Income", "Other Income"
+            ],
+            Expense: [
+                "Tuition", 
+                "Books/Supplies", 
+                "Housing", 
+                "Transportation", 
+                "Food", 
+                "Entertainment", 
+                "Other"
+            ]
+        };
+
+        function updateCategories() {
+            // update the categories based on the selection of eiter incme or expense
+            const type = document.getElementById('type').value;
+            const categorySelect = document.getElementById('category');
+            
+            categorySelect.innerHTML = '';
+            
+            categories[type].forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                categorySelect.appendChild(option);
+            });
+        }
+
+        function toggleAllocation() {
+            // TODO
+            const type = document.getElementById('type').value;
+            const allocationContainer = document.getElementById('allocation-container');
+            const allocationSelect = document.getElementById('allocation');
+            
+            if (type === 'Income') {
+                allocationContainer.style.display = 'block';
+                allocationSelect.setAttribute('required', 'required');
+            } else {
+                allocationContainer.style.display = 'none';
+                allocationSelect.removeAttribute('required');
+                allocationSelect.value = ''; 
+            }
+        }
+
+        // color pattern for the charts so it's not randomm
+        const IncomeChartColors = [
+            '#8686A7', 
+            '#6B6B94', 
+            '#585879', 
+            '#45455F', 
+            '#313144', 
+            '#34495e'  
+        ];
+
+        const ExpensesChartColor = [
+            '#C3BC97', 
+            '#B3A97A', 
+            '#A2965D', 
+            '#857B4C', 
+            '#6E663F', 
+            '#4A452B'  
+        ];
+
+        // chart for expenses
+        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+        const expenseColors = ExpensesChartColor; 
+
+        new Chart(expenseCtx, {
+            type: 'pie',
+            data: {
+                labels: chartData.expense_labels,
+                datasets: [{
+                    data: chartData.expense_values,
+                    backgroundColor: expenseColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total Expenses by Category'
+                    }
+                }
+            }
+        });
+
+        // income chart setup
+        const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+        const incomeColors = IncomeChartColors; 
+
+        new Chart(incomeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: chartData.income_labels,
+                datasets: [{
+                    data: chartData.income_values,
+                    backgroundColor: incomeColors,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total Income by Source'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
