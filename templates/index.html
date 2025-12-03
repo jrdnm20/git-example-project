@@ -11,19 +11,19 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #d2bfa3; 
-            color: #333;
+            background-color: white; 
+            color: black;
         }
-        .container {
+        .contaißner {
             max-width: 1200px;
             margin: auto;
-            background: #b73030;
+            background: whitesmoke;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 8px rgba(214, 41, 41, 0.1);
         }
         h1 {
-            color: #d2bfa3;
+            color: black;
             text-align: center;
             margin-bottom: 30px;
         }
@@ -40,9 +40,9 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             text-align: center;
         }
-        .income-card { background-color: #d2bfa3; color: #0f4d0b; }
-        .expense-card { background-color: #d2bfa3; color: #530909; }
-        .balance-card { background-color: #d2bfa3; color: #0f4d0b; font-size: 1.2em; font-weight: bold; }
+        .income-card { background-color: rgb(133, 215, 133); color: #0f4d0b; }
+        .expense-card { background-color: #d45353; color: #530909; }
+        .balance-card { background-color: #a0b7ec; color: #162056; font-size: 1.2em; font-weight: bold; }
 
         .card h3 { margin-top: 0; font-size: 1.5em; }
         .card p { font-size: 1.6em; margin: 5px 0 0; } 
@@ -54,13 +54,13 @@
         .form-section {
             flex: 1;
             padding: 20px;
-            background-color: #d2bfa3;
+            background-color: #ffffff;
             border-radius: 6px;
         }
         .charts-section {
             flex: 2;
             padding: 20px;
-            background-color: #d2bfa3;
+            background-color: white;
             border-radius: 6px;
             display: flex;
             flex-direction: column;
@@ -75,13 +75,13 @@
             width: 100%;
             padding: 8px;
             margin-top: 5px;
-            border: 1px solid #333;
+            border: 1px solid #230606;
             border-radius: 4px;
             box-sizing: border-box;
         }
         form button {
-            background-color: #b73030;
-            color: #d2bfa3;
+            background-color: #162056;
+            color: white;
             padding: 10px 15px;
             margin-top: 20px;
             border: none;
@@ -94,7 +94,7 @@
         .table-section {
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid #303030;
+            border-top: 1px solid black;
         }
         table {
             width: 100%;
@@ -106,19 +106,19 @@
             border-bottom: 1px solid #ccc
         }
         th {
-            background-color: #A9A9A9;
+            background-color: white;
             color: #303030;
             font-weight: bold;
         }
         tr:hover {
-            background-color: #ccc;
+            background-color: #dcdcdc;
         }
         .income { color: #21533b; font-weight: bold; }
-        .expense { color: #5f242a; font-weight: bold; }
+        .expense { color: #530909; font-weight: bold; }
 
         .delete-btn {
-            background-color: #6b4045;
-            color: #A9A9A9;
+            background-color: #d32035;
+            color: white;
             border: none;
             padding: 5px 10px;
             border-radius: 4px;
@@ -132,8 +132,8 @@
             text-align: center;
             margin-top: 20px;
             padding: 10px 20px;
-            background-color: #A9A9A9;
-            color: #303030;
+            background-color: rgb(76, 101, 152);
+            color: white;
             text-decoration: none;
             border-radius: 4px;
             font-weight: bold;
@@ -141,7 +141,7 @@
 
        
         #allocation-group {
-            border: 1px dashed #778899;
+            border: 1px dashed white;
             padding: 10px;
             margin-top: 15px;
             border-radius: 4px;
@@ -173,9 +173,9 @@
                 <p>${{ "{:,.2f}".format(total_balance) }}</p>
             </div>
         </div>
-        
+
         <div class="transfer-section" style="
-            background-color: #d2bfa3; 
+            background-color: white; 
             padding: 15px; 
             border-radius: 6px; 
             margin-bottom: 20px;
@@ -189,11 +189,11 @@
                        name="transfer_amount" 
                        step="0.01" 
                        min="0.01" 
-                       placeholder="Amount to Transfer ($)" 
+                       placeholder="Amount ($)" 
                        required 
                        style="width: 200px; padding: 8px;">
                 <button type="submit" style="
-                    background-color: #21533b; 
+                    background-color: #162056; 
                     color: white; 
                     padding: 8px 15px; 
                     border: none;
