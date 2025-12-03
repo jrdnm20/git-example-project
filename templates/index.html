@@ -11,19 +11,19 @@
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #A9A9A9; 
+            background-color: #d2bfa3; 
             color: #333;
         }
         .container {
             max-width: 1200px;
             margin: auto;
-            background: #778899;
+            background: #b73030;
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         h1 {
-            color: #303030;
+            color: #d2bfa3;
             text-align: center;
             margin-bottom: 30px;
         }
@@ -40,9 +40,9 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             text-align: center;
         }
-        .income-card { background-color: #A9A9A9; color: #303030; }
-        .expense-card { background-color: #A9A9A9; color: #303030; }
-        .balance-card { background-color: #A9A9A9; color: #303030; font-size: 1.2em; font-weight: bold; }
+        .income-card { background-color: #d2bfa3; color: #0f4d0b; }
+        .expense-card { background-color: #d2bfa3; color: #530909; }
+        .balance-card { background-color: #d2bfa3; color: #0f4d0b; font-size: 1.2em; font-weight: bold; }
 
         .card h3 { margin-top: 0; font-size: 1.5em; }
         .card p { font-size: 1.6em; margin: 5px 0 0; } 
@@ -54,13 +54,13 @@
         .form-section {
             flex: 1;
             padding: 20px;
-            background-color: #ccc;
+            background-color: #d2bfa3;
             border-radius: 6px;
         }
         .charts-section {
             flex: 2;
             padding: 20px;
-            background-color: #ccc;
+            background-color: #d2bfa3;
             border-radius: 6px;
             display: flex;
             flex-direction: column;
@@ -75,13 +75,13 @@
             width: 100%;
             padding: 8px;
             margin-top: 5px;
-            border: 1px solid #ccc;
+            border: 1px solid #333;
             border-radius: 4px;
             box-sizing: border-box;
         }
         form button {
-            background-color: #778899;
-            color: #303030;
+            background-color: #b73030;
+            color: #d2bfa3;
             padding: 10px 15px;
             margin-top: 20px;
             border: none;
@@ -150,16 +150,16 @@
 </head>
 <body>
     <div class="container">
-        <h1>Financial Aid Tracker</h1>
+        <h1>Student Finance Tracker</h1>
 
         <div class="summary-card">
             <div class="card income-card">
-                <h3>General Income</h3>
+                <h3>Total Income</h3>
                 <p>${{ "{:,.2f}".format(general_income) }}</p>
             </div>
             
             <div class="card expense-card">
-                <h3>General Expenses</h3>
+                <h3>Total Expenses</h3>
                 <p>${{ "{:,.2f}".format(general_expenses) }}</p>
             </div>
             
@@ -173,9 +173,39 @@
                 <p>${{ "{:,.2f}".format(total_balance) }}</p>
             </div>
         </div>
-
+        
+        <div class="transfer-section" style="
+            background-color: #d2bfa3; 
+            padding: 15px; 
+            border-radius: 6px; 
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        ">
+            <h3>Transfer Funds to Tuition</h3>
+            <form method="POST" action="{{ url_for('transfer_to_tuition') }}" style="display: flex; gap: 10px;" onsubmit="return confirm('Confirm transfer of funds to Tuition?');">
+                <input type="number" 
+                       name="transfer_amount" 
+                       step="0.01" 
+                       min="0.01" 
+                       placeholder="Amount to Transfer ($)" 
+                       required 
+                       style="width: 200px; padding: 8px;">
+                <button type="submit" style="
+                    background-color: #21533b; 
+                    color: white; 
+                    padding: 8px 15px; 
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                ">
+                    Pay Tuition
+                </button>
+            </form>
+        </div>
         <a href="{{ url_for('generate_report') }}" class="pdf-button" target="_blank">
-            Download Data
+            Download Data as PDF 
         </a>
 
         <div class="content-flex">
@@ -190,7 +220,7 @@
 
                     <div id="allocation-container" style="display:none;">
                         <div id="allocation-group">
-                            <label for="allocation">Allocate Fund To:</label>
+                            <label for="allocation">Allocate Location:</label>
                             <select id="allocation" name="allocation" required>
                                 <option value="General">General Expenses (Rent, Food, etc.)</option>
                                 <option value="Tuition">Tuition Cost (Offset Tuition Balance)</option>
@@ -215,10 +245,10 @@
             </div>
 
             <div class="charts-section">
-                <h2>Spending Breakdown (Excluding Tuition)</h2>
+                <h2>Spending Chart (Excludes Tuition)</h2>
                 <div style="height: 300px;"><canvas id="expenseChart"></canvas></div>
 
-                <h2>Income Sources (General Fund)</h2>
+                <h2>Income Chart</h2>
                 <div style="height: 300px;"><canvas id="incomeChart"></canvas></div>
             </div>
         </div>
@@ -362,7 +392,7 @@
                     },
                     title: {
                         display: true,
-                        text: 'Total Expenses by Category'
+                        text: 'Sources'
                     }
                 }
             }
@@ -391,7 +421,7 @@
                     },
                     title: {
                         display: true,
-                        text: 'Total Income by Source'
+                        text: 'Sources'
                     }
                 }
             }
