@@ -1,8 +1,8 @@
 import os
 from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, send_file
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_user, logout_user, current_user, login_required
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+from flask_sqlalchemy import SQLAlchemy
 from reportlab.pdfgen import canvas 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -328,15 +328,6 @@ def delete_transaction(id):
     db.session.commit()
     return redirect(url_for('index'))
 
-
-@app.route('/delete/<int:id>', methods=['POST'])
-@login_required #
-def delete_transaction(id):
-    # handle deleting a transaction
-    transaction_to_delete = Transaction.query.filter_by(id=id, user_id=current_user.id).first_or_404()
-    db.session.delete(transaction_to_delete)
-    db.session.commit()
-    return redirect(url_for('index'))
 
 @app.route('/report/pdf')
 @login_required

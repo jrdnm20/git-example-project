@@ -150,7 +150,13 @@
 </head>
 <body>
     <div class="container">
-        <h1>Student Finance Tracker</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h1 style="margin: 0;">Student Finance Tracker</h1>
+            <div style="color: #d2bfa3; font-weight: bold;">
+                Welcome, {{ username }}!
+                <a href="{{ url_for('logout') }}" style="color: #A9A9A9; margin-left: 15px; text-decoration: none;">(Logout)</a>
+            </div>
+        </div>
 
         <div class="summary-card">
             <div class="card income-card">
