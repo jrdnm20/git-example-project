@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, send_file
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin, LoginManager, login_user, logout_user, current_user, login_required
 from reportlab.pdfgen import canvas 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
@@ -13,10 +14,26 @@ app = Flask(__name__)
 # Database  setup
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'student_finance.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'your_super_secret_key_change_me_in_production'
 
 db = SQLAlchemy(app) 
 
-# Database Table 
+# login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password = db.Column(db.String(256), nullable=False) 
+    transactions = db.relationship('Transaction', backref='user', lazy=True)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+# database Table 
 class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow)
@@ -24,11 +41,13 @@ class Transaction(db.Model):
     description = db.Column(db.String(200), nullable=True)
     amount = db.Column(db.Float, nullable=False) 
     type = db.Column(db.String(10), nullable=False)
-    # Allocation choice: 'Tuition' or 'General'
+
+    # choice: tuition or general total balance
     allocation = db.Column(db.String(10), nullable=True) 
 
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-# Function to execute the data collection
+# function to execute the data collection
 def get_financial_summary():
     transactions = Transaction.query.order_by(Transaction.date.desc()).all()
     
@@ -134,9 +153,59 @@ def generate_pdf_report(transactions, general_income, general_expenses, total_ba
     buffer.seek(0)
     return buffer
 
-# Routes (Webpage URLs)
+# routes
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password'] 
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.password == password:
+            login_user(user)
+            flash('Logged in successfully!', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Login Failed. Check username and password.', 'danger')
+            
+    return render_template('login.html', action='login')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
+            flash('Username already exists. Please choose a different one.', 'warning')
+            return redirect(url_for('register'))
+
+        
+        new_user = User(username=username, password=password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Account created successfully! Please log in.', 'success')
+        return redirect(url_for('login'))
+        
+    return render_template('login.html', action='register')
+
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
 
 @app.route('/', methods=['GET', 'POST'])
+# make loggin in required to access
+@login_required
 def index():
     if request.method == 'POST':
         #transactions
@@ -145,6 +214,7 @@ def index():
         category = request.form['category']
         description = request.form['description']
         amount = float(request.form['amount'])
+
         tuition_percent_raw = request.form.get('tuition_percent', '0')
         tuition_percent = float(tuition_percent_raw) / 100.0
         general_percent = 1.0 - tuition_percent
@@ -220,10 +290,11 @@ def index():
     )
 
 @app.route('/transfer_to_tuition', methods=['POST'])
+@login_required
 def transfer_to_tuition():
     amount = float(request.form['transfer_amount'])
     
-    # 1. Expense: Deduct amount from General Balance
+    #for the expenses, deduct the amount from the total general balance
     expense_transaction = Transaction(
         date=datetime.utcnow().date(),
         type='Expense',
@@ -234,14 +305,14 @@ def transfer_to_tuition():
     )
     db.session.add(expense_transaction)
 
-    # 2. Income: Add amount to Tuition Aid Applied
+    # for the income, add the amount to tuition 
     income_transaction = Transaction(
         date=datetime.utcnow().date(),
         type='Income',
         category='Transfer',
         description='Tuition Payment (from General Balance)',
         amount=amount,
-        allocation='Tuition' # This ensures it lowers the Tuition Left calculation
+        allocation='Tuition' 
     )
     db.session.add(income_transaction)
     
@@ -257,7 +328,18 @@ def delete_transaction(id):
     db.session.commit()
     return redirect(url_for('index'))
 
+
+@app.route('/delete/<int:id>', methods=['POST'])
+@login_required #
+def delete_transaction(id):
+    # handle deleting a transaction
+    transaction_to_delete = Transaction.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+    db.session.delete(transaction_to_delete)
+    db.session.commit()
+    return redirect(url_for('index'))
+
 @app.route('/report/pdf')
+@login_required
 def generate_report():
     # Handle PDF generation request
     transactions, general_income, general_expenses, total_balance, _, _ , _= get_financial_summary()
