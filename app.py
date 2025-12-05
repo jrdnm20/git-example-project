@@ -109,10 +109,11 @@ def generate_pdf_report(transactions, general_income, general_expenses, total_ba
     p.drawString(50, height - 50, "Student Financial Report")
     
     p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, height - 110, f"General Income (Funds for Expenses): ${general_income:,.2f}")
-    p.drawString(250, height - 110, f"General Expenses: ${general_expenses:,.2f}")
-    p.drawString(450, height - 110, f"Net Balance: ${total_balance:,.2f}")
-    
+
+    p.drawString(50, height - 110, f"General Income: ${general_income:,.2f}")
+    p.drawString(280, height - 110, f"General Expenses: ${general_expenses:,.2f}")
+    p.drawString(480, height - 110, f"Net Balance: ${total_balance:,.2f}")
+
     # header for transaction history
     # ISSUE WHERE ITS OVERFLOWING OVER THE LETTER, FIX LATER
     p.setFont("Helvetica-Bold", 14)
@@ -120,12 +121,13 @@ def generate_pdf_report(transactions, general_income, general_expenses, total_ba
     
     p.setFont("Helvetica-Bold", 10)
     p.setFillColor(colors.gray)
+
     p.drawString(50, height - 175, "Date")
     p.drawString(130, height - 175, "Type")
-    p.drawString(190, height - 175, "Category")
-    p.drawString(310, height - 175, "Description") 
+    p.drawString(180, height - 175, "Category")
+    p.drawString(290, height - 175, "Description") 
     p.drawString(450, height - 175, "Fund")
-    p.drawString(520, height - 175, "Amount") 
+    p.drawString(520, height - 175, "Amount")
     
     #  line to seperate
     p.line(50, height - 180, width - 50, height - 180)
@@ -147,7 +149,7 @@ def generate_pdf_report(transactions, general_income, general_expenses, total_ba
 
         p.drawString(50, y_pos, t.date.strftime('%Y-%m-%d'))
         p.drawString(130, y_pos, t.type)
-        p.drawString(190, y_pos, t.category)
+        p.drawString(180, y_pos, t.category)
         
         # make sure that description is not too long
         description_text = (t.description[:20] + '...') if t.description and len(t.description) > 20 else t.description
