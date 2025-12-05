@@ -70,11 +70,20 @@ def get_financial_summary():
 
     income_categories = db.session.query(
         Transaction.category, db.func.sum(Transaction.amount)
-    ).filter(Transaction.type == 'Income', Transaction.allocation == 'General').group_by(Transaction.category).all()
+    ).filter(
+        Transaction.type == 'Income', 
+        Transaction.allocation == 'General', 
+        Transaction.user_id == current_user.id
+    ).group_by(Transaction.category).all()
 
     expense_categories = db.session.query(
         Transaction.category, db.func.sum(Transaction.amount)
-    ).filter(Transaction.type == 'Expense', Transaction.category != 'Tuition').group_by(Transaction.category).all()
+    ).filter(
+        Transaction.type == 'Expense', 
+        Transaction.category != 'Tuition', 
+        Transaction.user_id == current_user.id
+    ).group_by(Transaction.category).all()
+
 
     chart_data = {
         'income_labels': [c[0] for c in income_categories],
@@ -215,15 +224,16 @@ def index():
         description = request.form['description']
         amount = float(request.form['amount'])
 
-        tuition_percent_raw = request.form.get('tuition_percent', '0')
-        tuition_percent = float(tuition_percent_raw) / 100.0
-        general_percent = 1.0 - tuition_percent
-        
+        user_id_to_commit = current_user.id
         input_date = datetime.strptime(date, '%Y-%m-%d').date()
 
-        # allow users to split income, so  put a certain amount to pay tuition and have the rest go to total balance
-        if type == 'Income' and tuition_percent > 0 and tuition_percent < 1.0:
-            #tution allocation
+        tuition_percent_raw = request.form.get('tuition_percent', '0')
+        tuition_percent = float(tuition_percent_raw) / 100.0
+
+        is_split_income = (type == 'Income' and tuition_percent > 0 and tuition_percent < 1.0)
+
+        if is_split_income:
+            general_percent = 1.0 - tuition_percent
             tuition_amount = amount * tuition_percent
             tuition_transaction = Transaction(
                 date=input_date,
@@ -231,11 +241,11 @@ def index():
                 category=category,
                 description=f"{description} (Tuition Allocation: {tuition_percent*100:.0f}%)",
                 amount=tuition_amount,
-                allocation='Tuition'
+                allocation='Tuition',
+                user_id=user_id_to_commit 
             )
             db.session.add(tuition_transaction)
 
-            # total balance (general) allocation
             general_amount = amount * general_percent
             general_transaction = Transaction(
                 date=input_date,
@@ -243,35 +253,30 @@ def index():
                 category=category,
                 description=f"{description} (General Allocation: {general_percent*100:.0f}%)",
                 amount=general_amount,
-                allocation='General'
+                allocation='General', # FIXED SYNTAX
+                user_id=user_id_to_commit # FIXED
             )
             db.session.add(general_transaction)
 
     
         else:
-            # set the allocation based on the transaction type and split choice
             if type == 'Income':
-                # ff tuition_percent is 1.0 (100%), allocate to Tuition
-                if tuition_percent == 1.0:
-                    allocation = 'Tuition'
-                # if tuition_percent is 0.0 (0%), allocate to General
-                else: # This covers 0% split and the original Income handling
-                    allocation = 'General'
+                allocation = 'Tuition' if tuition_percent == 1.0 else 'General'
             else:
-                # expenses do not need an allocation value for the balance calculation
-                allocation = None 
+                allocation = None
 
         new_transaction = Transaction(
-            date=input_date,
+            date=datetime.strptime(date, '%Y-%m-%d').date(),
             type=type,
             category=category,
             description=description,
             amount=amount,
-            allocation=allocation
+            allocation=allocation,
+            user_id=user_id_to_commit
         )
-        
         db.session.add(new_transaction)
-        db.session.commit()
+        
+        db.session.commit() 
         return redirect(url_for('index'))
 
     # load dashboard
@@ -286,7 +291,8 @@ def index():
         total_balance=total_balance,
         chart_data=chart_data,
         total_tuition_left=total_tuition_left,
-        total_tuition_cost=total_tuition_cost
+        total_tuition_cost=total_tuition_cost,
+        username=current_user.username
     )
 
 @app.route('/transfer_to_tuition', methods=['POST'])

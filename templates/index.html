@@ -152,9 +152,9 @@
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h1 style="margin: 0;">Student Finance Tracker</h1>
-            <div style="color: #d2bfa3; font-weight: bold;">
-                Welcome, {{ username }}!
-                <a href="{{ url_for('logout') }}" style="color: #A9A9A9; margin-left: 15px; text-decoration: none;">(Logout)</a>
+            <div style="color: black; font-weight: bold;">
+                    Welcome!
+                <a href="{{ url_for('logout') }}" style="color: black; margin-left: 15px; text-decoration: none;">(Logout)</a>
             </div>
         </div>
 
@@ -224,15 +224,28 @@
                         <option value="Expense">Expense</option>
                     </select>
 
+                    <!-- INCOME SPLIT SLIDER/ALLOCATION -->
                     <div id="allocation-container" style="display:none;">
                         <div id="allocation-group">
-                            <label for="allocation">Allocate Location:</label>
-                            <select id="allocation" name="allocation" required>
-                                <option value="General">General Expenses (Rent, Food, etc.)</option>
-                                <option value="Tuition">Tuition Cost (Offset Tuition Balance)</option>
-                            </select>
+                             <p style="font-weight: bold; margin-bottom: 5px;">Income Allocation Split (Tuition %):</p>
+                            
+                            <label for="tuition_percent" style="display: inline-block; width: 45%;">Tuition %:</label>
+                            <label for="general_percent_display" style="display: inline-block; width: 45%; text-align: right;">General %:</label>
+                            
+                            <!-- This is the input field the Python logic expects -->
+                            <input type="range" id="tuition_percent" name="tuition_percent" min="0" max="100" value="100" step="1" style="width: 100%; margin-bottom: 10px;">
+                            
+                            <div style="display: flex; justify-content: space-between;">
+                                <span id="tuition_percent_value" style="font-weight: bold;">100%</span>
+                                <span id="general_percent_value" style="font-weight: bold;">0%</span>
+                            </div>
+                            
+                            <!-- Hidden field the Python logic uses as a flag -->
+                            <input type="hidden" name="allocation" value="split"> 
                         </div>
                     </div>
+                    <!-- END INCOME SPLIT SLIDER/ALLOCATION -->
+
                     <label for="category">Category:</label>
                     <select id="category" name="category" required>
                         </select>
@@ -304,6 +317,14 @@
             const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             dateInput.value = `${yyyy}-${mm}-${dd}`;
+            
+            // Setup for the split slider
+            const tuitionSlider = document.getElementById('tuition_percent');
+            if (tuitionSlider) {
+                tuitionSlider.addEventListener('input', updateSplitDisplay);
+                updateSplitDisplay(); 
+            }
+
             updateCategories(); 
             toggleAllocation();
         });
@@ -339,6 +360,17 @@
                 categorySelect.appendChild(option);
             });
         }
+
+        function updateSplitDisplay() {
+            const tuitionSlider = document.getElementById('tuition_percent');
+            if (!tuitionSlider) return;
+
+            const tuitionPercent = tuitionSlider.value;
+            const generalPercent = 100 - tuitionPercent;
+
+            document.getElementById('tuition_percent_value').textContent = `${tuitionPercent}%`;
+            document.getElementById('general_percent_value').textContent = `${generalPercent}%`;
+}
 
         function toggleAllocation() {
             // TODO
